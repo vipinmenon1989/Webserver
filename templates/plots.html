@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>{{ title }}</h2>
+
+  <div class="btn-row">
+    <a class="btn secondary" href="{{ url_for('index') }}">← Back</a>
+  </div>
+
+  {% if images and images|length > 0 %}
+    <div class="img-grid">
+      {% for fn in images %}
+        <figure>
+          <img src="{{ url_for('plot_image', token=token, fname=fn) }}" alt="{{ fn }}">
+          <figcaption class="muted">{{ fn }}</figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">No plots available.</p>
+  {% endif %}
+</section>
+{% endblock %}

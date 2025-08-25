@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Results</h2>
+
+  <!-- Button toolbar (like Submit) -->
+  <div class="btn-row">
+    <a class="btn primary"  href="{{ url_for('download_result', token=token, fmt='csv') }}">Download CSV</a>
+    <a class="btn secondary" href="{{ url_for('download_result', token=token, fmt='tsv') }}">Download TSV</a>
+    <a class="btn secondary" href="{{ url_for('download_result', token=token, fmt='xlsx') }}">Download Excel</a>
+    <a class="btn secondary" href="{{ url_for('download_result', token=token, fmt='txt') }}">Download TXT</a>
+    <span class="muted count">{{ rows|length }} guides</span>
+  </div>
+  <div class="btn-row" style="margin-top:6px">
+    <a class="btn primary" href="{{ url_for('boxplot_view', token=token) }}">Plots</a>
+  </div>
+  {% if rows and rows|length > 0 %}
+    {# Build base keys and exclude them from score keys.
+       We explicitly include 'PAM' here so it is NOT treated as a score column. #}
+    {% set first = rows[0] %}
+    {% set has_id = 'ID' in first %}
+    {% set base_core = ['Start','End','Strand','Sequence','ReverseComplement','PAM'] %}
+    {% set base_keys = (['ID'] if has_id else []) + base_core %}
+
+    {# Collect score keys: all columns not in base_keys #}
+    {% set ns = namespace(score_keys=[]) %}
+    {% for k in first.keys() %}
+      {% if k not in base_keys %}
+        {% set ns.score_keys = ns.score_keys + [k] %}
+      {% endif %}
+    {% endfor %}
+    {% set score_keys = ns.score_keys | sort %}
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            {% if has_id %}<th>ID</th>{% endif %}
+            <th>Start</th>
+            <th>End</th>
+            <th>Strand</th>
+            <th>Target sequence</th>
+            <th>PAM</th>
+            {% for k in score_keys %}
+              <th>
+                {{ k
+                  | replace('_xgb_clf','')
+                  | replace('_xgb','')
+                  | replace('_clf','')
+                }}
+              </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            {# Target = Sequence for '+', ReverseComplement for '-' #}
+            {% set target = row['Sequence'] if row['Strand'] == '+' else row['ReverseComplement'] %}
+            {% set pre   = target[0:24] %}
+            {% set pam   = target[24:27] %}
+            {% set post  = target[27:] %}
+            <tr>
+              {% if has_id %}<td>{{ row['ID'] }}</td>{% endif %}
+              <td>{{ row['Start'] }}</td>
+              <td>{{ row['End'] }}</td>
+              <td>{{ row['Strand'] }}</td>
+
+              <td class="seq-mono">{{ pre }}<span class="pam">{{ pam }}</span>{{ post }}</td>
+              <td class="seq-mono">{{ pam }}</td>
+
+              {% for k in score_keys %}
+                <td>
+                  {% set v = row[k] %}
+                  {% if v is number %}
+                    {{ '%.6f' % v }}
+                  {% else %}
+                    {{ v }}
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No results.</p>
+  {% endif %}
+</section>
+{% endblock %}

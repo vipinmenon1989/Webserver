@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Input FASTA</h2>
+
+  <form method="post" enctype="multipart/form-data" id="fasta-form">
+    <label for="fasta_text">Paste FASTA sequences (multi-FASTA allowed, max 500bp each):</label>
+    <textarea
+      id="fasta_text"
+      name="fasta_text"
+      class="fixed-textarea"
+      rows="12"
+      spellcheck="false"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      placeholder=">seq1
+ACGT..."></textarea>
+
+    <div class="helper">
+      <span id="count-help">0 lines</span>
+      <span id="limit-help"></span>
+    </div>
+
+    <div class="btn-row">
+      <button type="button" id="example-btn" class="secondary">Example</button>
+
+      <!-- Drag & drop label for the hidden file input -->
+      <label class="dropzone" for="fasta_file" id="dropzone">
+        <span class="hint">Drop .fa/.fasta/.fna here or click to choose</span>
+        <span class="file-name" id="file-name"></span>
+      </label>
+      <input type="file" name="fasta_file" id="fasta_file" accept=".fa,.fasta,.fna" hidden />
+    </div>
+
+    <!-- Mode selection (no label text) -->
+    <div class="toggle-group" id="mode-toggle" role="group" aria-label="TreeCRISPR mode">
+      <input type="radio" id="mode_i" name="mode" value="i">
+      <label for="mode_i" class="toggle">TreeCRISPRi</label>
+
+      <input type="radio" id="mode_a" name="mode" value="a">
+      <label for="mode_a" class="toggle">TreeCRISPRa</label>
+    </div>
+
+    <div class="btn-row">
+      <button type="submit" id="submit-btn" disabled>Submit</button>
+      <span class="muted" id="submit-hint">Paste/upload FASTA and select i/a to enable submit.</span>
+    </div>
+  </form>
+</section>
+
+<script>
+  // --- Example toggle (fill/clear) ---
+  (function () {
+    const example = `>LINC00478 (Chr21:17,959,604-17,960,104)
+CAGACAGCATTAGAGTTGGCTTGAGAATTGCCGTACTTTGCTTCCCTTTGTATGTATTTC
+TTGTATGCTGCCGAGTCACTGATGGCTAGCTCTGTCTGGCAAGTAATTCAAAAATGCTGT
+TTATGTAGAAAGGAAAGGTAGGGACTTTACCACACTCTGTCATTAAAGGGAGCAATTGAA
+GAACAAAGGAACTGAGTAAATACCTATATATTGCCTTTTGTGTTGCGAAACACTGTAGCA
+CAAACACATTTGTGTTCAGCCAAATGTTTTACTTCCTTTTGTAATAACGCATATAGTAGG
+TTGTCTCCACATATGTACAAGAATCCATATTTTATTTAAACGTATATAGTCAATTGTTCA
+TATTTATAGGCTGCAAACATTTCTCAATCTCAAAGACTTTTACATATCCACTCCCACACA
+GCTATTTGTTATTATTTTAAAAG`;
+    const btn = document.getElementById('example-btn');
+    const box = document.getElementById('fasta_text');
+    let showingExample = false;
+
+    btn.addEventListener('click', function () {
+      if (!showingExample) {
+        box.value = example.trim() + "\n";
+        showingExample = true;
+        btn.textContent = "Clear Example";
+      } else {
+        box.value = "";
+        showingExample = false;
+        btn.textContent = "Example";
+      }
+      box.focus(); box.scrollTop = 0;
+      updateCounts(); triggerValidate();
+    });
+  })();
+
+  // --- Drag & drop to hidden file input + name display ---
+  (function () {
+    const dz = document.getElementById('dropzone');
+    const file = document.getElementById('fasta_file');
+    const nameEl = document.getElementById('file-name');
+
+    function setDZ(active) { dz.style.background = active ? '#eaf2ff' : '#f7fbff'; }
+
+    ['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); setDZ(true); }));
+    ['dragleave','drop'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); setDZ(false); }));
+
+    dz.addEventListener('drop', e => { file.files = e.dataTransfer.files; updateFileName(); triggerValidate(); });
+    file.addEventListener('change', () => { updateFileName(); triggerValidate(); });
+
+    function updateFileName() {
+      const f = file.files && file.files[0];
+      nameEl.textContent = f ? `• ${f.name}` : '';
+    }
+  })();
+
+  // --- Live counts + simple >500bp warning ---
+  const box = document.getElementById('fasta_text');
+  const countHelp = document.getElementById('count-help');
+  const limitHelp = document.getElementById('limit-help');
+
+  function parseSeqs(text) {
+    return text.split(/^>/m).filter(Boolean).map(block => {
+      return block.replace(/^[^\n]*\n/, '').replace(/\s+/g,'').toUpperCase();
+    });
+  }
+  function updateCounts() {
+    const text = box.value.trim();
+    const lines = text ? text.split(/\r?\n/).length : 0;
+    countHelp.textContent = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
+
+    const seqs = text ? parseSeqs(text) : [];
+    const tooLong = seqs.some(s => s.length > 500);
+    limitHelp.textContent = tooLong ? 'One or more sequences exceed 500 bp.' : '';
+    limitHelp.className = tooLong ? 'warn' : '';
+  }
+  box.addEventListener('input', () => { updateCounts(); triggerValidate(); });
+
+  // --- Enable Submit only when (paste or upload) AND mode chosen ---
+  const submitBtn = document.getElementById('submit-btn');
+  const hint = document.getElementById('submit-hint');
+  function triggerValidate() {
+    const hasPaste = box.value.trim().length > 0;
+    const file = document.getElementById('fasta_file');
+    const hasUpload = file && file.files && file.files.length > 0;
+    const modeChosen = document.querySelector('input[name="mode"]:checked');
+    const ok = (hasPaste || hasUpload) && !!modeChosen;
+    submitBtn.disabled = !ok;
+    hint.textContent = ok ? '' : 'Paste/upload FASTA and select i/a to enable submit.';
+  }
+
+  // --- Visual active state for mode pills + hook into validation ---
+  (function () {
+    const group = document.getElementById('mode-toggle'); if (!group) return;
+    const radios = group.querySelectorAll('input[type="radio"]');
+    const labels = group.querySelectorAll('label.toggle');
+    function refresh() {
+      labels.forEach(l => l.classList.remove('active'));
+      radios.forEach((r, i) => { if (r.checked) labels[i].classList.add('active'); });
+      triggerValidate();
+    }
+    radios.forEach(r => r.addEventListener('change', refresh));
+    refresh();
+  })();
+
+  // initial UI sync
+  updateCounts();
+  triggerValidate();
+</script>
+{% endblock %}

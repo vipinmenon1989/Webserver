@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Editor score plots</h2>
+
+  <p class="muted">
+    We show four views of the same scores per editor:<br>
+    <strong>Boxplot</strong> (robust spread, y in [0,1]), <strong>Ridgeline</strong> (smoothed densities),
+    <strong>Rank heatmap</strong> (Kendall’s τ-b concordance), and <strong>Dominance</strong> (P(Editor i &gt; Editor j)).<br>
+    Pairwise differences use the <strong>Mann–Whitney U</strong> test (two-sided, non-parametric).
+    “Better” means higher median; effect sizes are <strong>Cliff’s δ</strong> and
+    <strong>Hodges–Lehmann</strong> shift (median pairwise diff).
+  </p>
+
+  <div class="btn-row">
+    <a class="btn primary"  href="{{ url_for('boxplot_download', token=token, kind='box') }}">Download Boxplot</a>
+    <a class="btn secondary" href="{{ url_for('boxplot_download', token=token, kind='ridge') }}">Download Ridgeline</a>
+    <a class="btn secondary" href="{{ url_for('boxplot_download', token=token, kind='tau') }}">Download Rank Heatmap</a>
+    <a class="btn secondary" href="{{ url_for('boxplot_download', token=token, kind='dom') }}">Download Dominance Heatmap</a>
+    <a class="btn secondary" href="{{ url_for('boxplot_download', token=token, kind='csv') }}">Download Stats (CSV)</a>
+    <a class="btn secondary" href="{{ url_for('index') }}">← Back</a>
+  </div>
+
+  {% if ranking_text %}
+    <div class="flash success" style="margin-top:12px;">
+      <strong>Overall (wins → median tiebreak):</strong> {{ ranking_text }}
+    </div>
+  {% endif %}
+
+  <div class="img-grid">
+    {% if have_box %}
+      <figure>
+        <img src="{{ url_for('boxplot_image', token=token, kind='box') }}" alt="Scores boxplot">
+        <figcaption class="muted">Boxplot (means shown as dots)</figcaption>
+      </figure>
+    {% endif %}
+    {% if have_ridge %}
+      <figure>
+        <img src="{{ url_for('boxplot_image', token=token, kind='ridge') }}" alt="Scores ridgeline">
+        <figcaption class="muted">Ridgeline density</figcaption>
+      </figure>
+    {% endif %}
+    {% if have_tau %}
+      <figure>
+        <img src="{{ url_for('boxplot_image', token=token, kind='tau') }}" alt="Rank heatmap">
+        <figcaption class="muted">Rank concordance (Kendall’s τ-b)</figcaption>
+      </figure>
+    {% endif %}
+    {% if have_dom %}
+      <figure>
+        <img src="{{ url_for('boxplot_image', token=token, kind='dom') }}" alt="Dominance heatmap">
+        <figcaption class="muted">P(Editor i &gt; Editor j)</figcaption>
+      </figure>
+    {% endif %}
+  </div>
+
+  {% if show_table and table_rows and table_rows|length > 0 %}
+    <h3 style="margin-top:18px;">Significant differences (p ≤ 0.05)</h3>
+    <div class="table-wrapper" style="margin-top:10px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Editor 1</th><th>Editor 2</th><th>P-value</th>
+            <th>Better</th><th>Effect (Cliff’s δ, HL)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in table_rows %}
+            <tr>
+              <td>{{ r['Editor1'] }}</td>
+              <td>{{ r['Editor2'] }}</td>
+              <td>{{ '%.4g' % r['pvalue'] }}</td>
+              <td>{{ r['Better'] }}</td>
+              <td>
+                {{ ('δ=%.3f' % r['cliffs_delta']) if r['cliffs_delta'] is not none else 'δ=nan' }}
+                ({{ r['cliffs_mag'] }}),
+                HL={{ ('%+.3f' % r['hl_shift']) if r['hl_shift'] is not none else 'nan' }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:10px;">
+      Cliff’s δ magnitude guide: |δ| &lt; 0.147 negligible, &lt; 0.33 small, &lt; 0.474 medium, ≥ 0.474 large.
+      A positive δ or HL means Editor&nbsp;1 tends to score higher; negative favors Editor&nbsp;2.
+    </p>
+  {% else %}
+    <p class="muted" style="margin-top:12px;">
+      No editor pair shows a statistically significant difference (p &gt; 0.05); inspect the plots above.
+    </p>
+  {% endif %}
+</section>
+{% endblock %}

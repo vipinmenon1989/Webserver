@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Workflow</h2>
+  <p class="muted">High-level flow of TreeCRISPRi scoring.</p>
+  <figure class="workflow-figure">
+  <!--  <img src="{{ url_for('static', filename='img/workflow.png') }}" alt="TreeCRISPRi workflow"> -->
+    <figcaption>Input FASTA → 30-mer scan (NGG at 25–27) → Features → Models → Reports</figcaption>
+  </figure>
+</section>
+{% endblock %}

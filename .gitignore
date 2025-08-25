@@ -1,0 +1,15 @@
+# runtime & heavy data
+uploads/
+results_cache/
+bigwig/
+*.bw
+*.bigwig
+
+# python
+__pycache__/
+*.pyc
+
+# env and IDE
+.venv/
+.env
+.vscode/

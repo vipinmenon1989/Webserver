@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>TreeCRISPR (i/a)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1 class="site-title">TreeCRISPR <span class="variant">(i/a)</span></h1>
+    <nav class="navbar">
+      <ul>
+        <li><a href="{{ url_for('index') }}">Home</a></li>
+        <li><a href="{{ url_for('workflow') }}">Workflow</a></li>
+        <li><a href="https://github.com/vipinmenon1989/Webserver" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://weililab.org/contact/" target="_blank" rel="noopener">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-area">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Global: auto-dismiss flashes -->
+  <script>
+    (function () {
+      const flashes = document.querySelectorAll('.flash');
+      if (!flashes.length) return;
+      setTimeout(() => {
+        flashes.forEach(el => {
+          el.classList.add('hide');
+          setTimeout(() => el.remove(), 250);
+        });
+      }, 5000);
+    })();
+  </script>
+</body>
+</html>
